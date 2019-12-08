@@ -385,6 +385,6 @@ print('Percent of cut vertices: {}'.format(round(float(percent_cut_vertices),3))
 
 # Percent of cut edges
 bridges = list(nx.bridges(nxgraph))
-perc_cut_edges = len(bridges)/len(G.edges)
+perc_cut_edges = len(bridges)/gtgraph.num_edges()
 print('Percent of cut edges: {}'.format(round(perc_cut_edges,2)))
 ```
