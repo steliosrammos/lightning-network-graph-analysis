@@ -1,0 +1,390 @@
+---
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.2'
+      jupytext_version: 1.3.0
+  kernelspec:
+    display_name: Python 3
+    language: python
+    name: python3
+---
+
+# Convert LN JSON graph data to Pandas DataFrame
+
+```{python}
+import pandas as pd
+import json
+from pandas.io.json import json_normalize
+
+def convert_ln_json_to_df(json_file_path):
+    
+    graph_path = open(json_file_path)
+    graph_json = json.load(graph_path)
+    
+    df_nodes = json_normalize(graph_json['nodes'])
+    
+    df_channels = json_normalize(graph_json['edges'])
+    df_channels.channel_id = df_channels.capacity.astype(int)
+    df_channels.capacity = df_channels.capacity.astype(int)
+    
+    return df_nodes, df_channels
+
+lngraph_path = '/Users/steliosrammos/Documents/Datasets/LNGraph/lngraph_20193011.json'
+
+df_nodes, df_channels = convert_ln_json_to_df(lngraph_path)
+```
+
+```{python}
+df_nodes.head()
+```
+
+```{python}
+df_channels.head()
+```
+
+# Convert LN JSON graph data to NetworkX graph
+
+```{python}
+import networkx as nx
+import json
+
+def convert_ln_json_to_nx_graph(json_file_path):
+
+    # Read JSON data
+    graph_path = open(json_file_path)
+    graph_json = json.load(graph_path)
+    
+    # Create an empty graph
+    G = nx.Graph()
+    
+    # Parse and add nodes
+    for node in graph_json['nodes']:
+        G.add_node(
+            node['pub_key'], 
+            alias=node['alias'], 
+            addresses=node['addresses'], 
+            color=node['color'], 
+            last_update=['last_update']
+        )
+        
+    # Parse and add edges
+    for edge in graph_json['edges']:
+        G.add_edge(
+            edge['node1_pub'],
+            edge['node2_pub'],
+            channel_id=edge['channel_id'],
+            chan_point=edge['chan_point'],
+            last_update=edge['last_update'],
+            capacity=edge['capacity'],
+            node1_policy=edge['node1_policy'],
+            node2_policy=edge['node2_policy']
+        )
+        
+    return G
+
+lngraph_path = '/Users/steliosrammos/Documents/Datasets/LNGraph/lngraph_20193011.json'
+nxgraph = convert_ln_json_to_nx_graph(lngraph_path)
+```
+
+```{python}
+nx.number_of_nodes(nxgraph)
+```
+
+```{python}
+nx.number_of_edges(nxgraph)
+```
+
+# Convert LN JSON graph data to Graph-Tool graph
+
+```{python}
+from graph_tool.all import *
+import graph_tool as gt
+
+def convert_ln_json_to_gt_graph(json_file_path, internal_properties=True, directed=False):
+
+    # Read JSON data
+    graph_path = open(json_file_path)
+    graph_json = json.load(graph_path)
+    
+    # We start with an empty, directed graph
+    g = gt.Graph(directed=directed)
+
+    # Adding the node properties
+    v_pub_key = g.new_vertex_property("string")
+    v_last_update = g.new_vertex_property("int")
+    v_alias = g.new_vertex_property("string")
+    v_addresses = g.new_vertex_property("string")
+    v_color = g.new_vertex_property("string")
+
+    # Adding the edge properties
+    e_channel_id = g.new_edge_property("object")
+    e_chan_point = g.new_edge_property("object")
+    e_last_update = g.new_edge_property("int")
+    e_capacity = g.new_edge_property("object")
+    e_node1_pub = g.new_edge_property("object")
+    e_node2_pub = g.new_edge_property("object")
+    e_node1_policy = g.new_edge_property("object")
+    e_node2_policy = g.new_edge_property("object")
+
+    # Create dictionary of pub_key:index pairs to keep track of vertices to generate edges
+    v_indeces = {}
+    
+    # Let's now add the new vertices and edges
+    for node in graph_json['nodes']:
+        v = g.add_vertex()
+        v_pub_key[v] = node['pub_key']
+        v_alias[v] = node['alias']
+        v_addresses[v] = node['addresses']
+        v_color[v] = node['color']
+        v_last_update[v] = node['last_update']
+        v_indeces[node['pub_key']] = g.vertex_index[v]
+
+    for edge in graph_json['edges']:
+        v_index = v_indeces[edge['node1_pub']]
+        target_index = v_indeces[edge['node2_pub']]
+        
+        v = g.vertex(v_index)
+        target = g.vertex(target_index)
+        e = g.add_edge(v, target)
+
+        e_channel_id[e] = edge['channel_id']
+        e_chan_point[e] = edge['chan_point']
+        e_last_update[e] = edge['last_update']
+        e_capacity[e] = edge['capacity']
+        e_node1_pub[e] = edge['node1_pub']
+        e_node2_pub[e] = edge['node2_pub']
+        e_node1_policy[e] = edge['node1_policy']
+        e_node2_policy[e] = edge['node2_policy']
+                             
+    # Making the vertex and edge properties internal (to be able to save them with the graph)
+    if internal_properties:
+        g.vertex_properties['pub_key'] = v_pub_key
+        g.vertex_properties['alias'] = v_alias
+        g.vertex_properties['addresses'] = v_addresses
+        g.vertex_properties['color'] = v_color
+        g.vertex_properties['last_update'] = v_last_update
+                             
+        g.edge_properties['channel_id'] = e_channel_id
+        g.edge_properties['chan_point'] = e_chan_point
+        g.edge_properties['last_update'] = e_last_update
+        g.edge_properties['node1_pub'] = e_node1_pub
+        g.edge_properties['node2_pub'] = e_node2_pub
+        g.edge_properties['node1_policy'] = e_node1_policy
+        g.edge_properties['node2_policy'] = e_node2_policy
+                             
+    return g
+
+lngraph_path = '/Users/steliosrammos/Documents/Datasets/LNGraph/lngraph_20193011.json'
+gtgraph = convert_ln_json_to_gt_graph(lngraph_path)
+```
+
+```{python}
+gtgraph
+```
+
+# Function to compute the average and quartile values of a metric
+
+```{python}
+import numpy as np
+
+def get_basic_stats(values, column_label):
+    
+    average = values.mean()
+    percentiles = np.percentile(values, [90, 50, 10])
+
+    print('Statistics for {}: '.format(column_label))
+    print('Average: {} \nPercentiles: \n 90th Percentile: {} \n 50th Percentile: {} \n 10th Percentile: {} \n'.format(
+        average, percentiles[0], percentiles[1], percentiles[2]
+    ))
+    
+    return average, percentiles
+```
+
+# Nodes (dataframe)
+
+* Number of nodes, with/without channels
+* Channels per node
+* Capacity per node
+
+```{python}
+def add_node_chan_info(df_nodes, df_channels):
+    df_nodes = pd.concat([
+        df_nodes,
+        pd.DataFrame(columns=[
+                'num_enabled_channels',
+                'num_channels',
+                'percent_enabled_chan',
+                'total_node_capacity'
+        ])
+    ], sort=False)
+
+    for index, node in df_nodes.iterrows():
+
+        pub_key = node['pub_key']
+        node_channels = df_channels[df_channels.node1_pub == pub_key]
+
+        enabled_channels = 0
+        total_capacity = 0
+
+        for _, channel in node_channels.iterrows():
+            total_capacity += channel.capacity
+            disabled = channel.loc['node1_policy.disabled']
+
+            if disabled is not None and not disabled:
+                enabled_channels += 1
+
+        df_nodes.loc[index, 'num_enabled_channels'] = enabled_channels
+        df_nodes.loc[index, 'num_channels'] = node_channels.shape[0]
+        if node_channels.shape[0] > 0: df_nodes.loc[index, 'percent_enabled_chan'] = enabled_channels/node_channels.shape[0]
+        df_nodes.loc[index, 'total_node_capacity'] = total_capacity
+
+    return df_nodes
+```
+
+```{python}
+df_nodes = add_node_chan_info(df_nodes, df_channels)
+df_nodes.head()
+```
+
+```{python}
+# Number of nodes with/without channels
+cnt_nodes_with_channels = df_nodes[df_nodes.num_channels != 0].shape[0]
+cnt_nodes_without_channels = df_nodes[df_nodes.num_channels == 0].shape[0]
+total_cnt_nodes = cnt_nodes_with_channels+cnt_nodes_without_channels
+
+print('Number of nodes {} \n with channels: {} \n without channels {} \n'
+      .format(cnt_nodes_with_channels, cnt_nodes_without_channels, total_cnt_nodes)
+    )
+
+# Statistics for channels per node
+# Including inactive nodes (nodes with no channels)
+values = df_nodes.num_channels.values
+average, percentiles = get_basic_stats(values, 'node channels (with inactive)')
+
+# Without inactive nodes
+values = df_nodes.loc[df_nodes.num_enabled_channels != 0, 'num_channels'].values
+average, percentiles = get_basic_stats(values, 'node channels (without inactive)')
+
+# Statistics for capacity per node
+# Including inactive nodes (nodes with no channels)
+values = df_nodes.total_node_capacity.values
+average, percentiles = get_basic_stats(values, 'node capacities (with inactive)')
+
+# Without inactive nodes
+values = df_nodes.loc[df_nodes.num_enabled_channels != 0, 'total_node_capacity'].values
+average, percentiles = get_basic_stats(values, 'node capacities (without inactive)')
+```
+
+# Channels
+
+```{python}
+total_num_channels = df_channels.shape[0]
+
+unique_channels = df_channels.drop_duplicates(subset=['node1_pub', 'node2_pub'])
+num_unique_channels = unique_channels.shape[0]
+num_duplicate_channels = total_num_channels - unique_channels.shape[0]
+
+print('Total number of channels: {} \n unique: {} \n duplicate: {}'.format(total_num_channels, num_unique_channels, num_duplicate_channels))
+```
+
+# Network Capacity
+
+```{python}
+capacity = df_channels.capacity.sum()
+print(capacity/100000000)
+```
+
+# Capacity Per Channel
+
+```{python}
+values = df_channels.capacity.values
+average, percentiles = get_basic_stats(values, 'capacity per channel')
+```
+
+# Distance Measures
+
+```{python}
+# Keep largest connected component
+l = gt.topology.label_largest_component(gtgraph, directed=False)
+gtgraph.set_vertex_filter(l)
+print('Number of vertices: {} \n Number of edges: {} \n'.format(gtgraph.num_vertices(), gtgraph.num_edges()))
+
+# Remove self-loops (ie: duplicate edges)
+gt.stats.remove_parallel_edges(gtgraph)
+print('Number of vertices: {} \n Number of edges: {} \n'.format(gtgraph.num_vertices(), gtgraph.num_edges()))
+```
+
+```{python}
+def get_distance_measures(graph, directed=False, pseudo_diameter=False, return_dist=False):
+
+    # Compute shortest paths from all vertices to all vertices and save results in a dataframe
+    dist_map = shortest_distance(graph, directed)
+    shortest_paths = pd.DataFrame(dist_map)
+
+    # Average distance
+    average = shortest_paths.replace(0, np.nan).mean(skipna=True).mean()
+    print('Average shortest distance: {}'.format(round(average, 2)))
+
+    # Diameter of the graph: length of the longest shortest path in the graph
+    if pseudo_diameter:
+        diameter, _ = gt.topology.pseudo_diameter(graph)
+        print('Diameter: {}'.format(pseudo_diameter))
+    else: 
+        diameter = shortest_paths.values.max()
+        print('Pseudo-diameter: {}'.format(diameter))
+
+    # Radius of the graph: smallest of largest shortest path of
+    radius = shortest_paths.replace(0, np.nan).max(skipna=True).min()
+    print('Radius: {}'.format(radius))
+
+    if return_dist:
+        return shortest_paths, average, diameter, radius
+
+    return average, diameter, radius
+```
+
+```{python}
+get_distance_measures(gtgraph)
+```
+
+# Completeness Measures
+
+```{python}
+# Completeness measure: density of the graph
+# The max number of channels (or edges) in the network is n*(n-1)/2, where n is the number of nodes (or vertices).
+max_num_channels = (total_cnt_nodes*(total_cnt_nodes-1))/2
+completeness = num_unique_channels/max_num_channels
+print(completeness)
+```
+
+# Clustering Measures
+
+```{python}
+# Transitivity is the ratio of potential triangles present.
+# A value of 1 means every path of length 2 loops back into a triangle.
+transitivity, sd = gt.clustering.global_clustering(gtgraph)
+print('Graph transitivity: {}\n'.format(round(transitivity,3)))
+
+# Clustering coefficient is the ratio of interconnections between a node's peers. 
+# A value of 0 means the node is a hub, and none of its peers are connected. A value of 1 means the node forms a clique with its peers.
+transitivities = gt.clustering.local_clustering(gtgraph).a
+get_basic_stats(transitivities, 'node transitivities')
+```
+
+# Connectivity Measures
+
+```{python}
+# Percent of cut vertices
+_, art, _ = gt.topology.label_biconnected_components(gtgraph)
+cnt_cut_vertices = art.a.sum()
+percent_cut_vertices = art.a.sum()/gtgraph.num_edges()
+print('Percent of cut vertices: {}'.format(round(float(percent_cut_vertices),3)))
+
+# Percent of cut edges
+bridges = list(nx.bridges(nxgraph))
+perc_cut_edges = len(bridges)/len(G.edges)
+print('Percent of cut edges: {}'.format(round(perc_cut_edges,2)))
+```
