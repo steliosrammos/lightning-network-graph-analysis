@@ -1,5 +1,6 @@
-import nbformat
-import pandas as pd
+import pytest
+nbformat = pytest.importorskip('nbformat')
+pd = pytest.importorskip('pandas')
 
 
 def load_add_node_chan_info():
