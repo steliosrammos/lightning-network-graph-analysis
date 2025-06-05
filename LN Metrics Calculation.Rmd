@@ -17,7 +17,7 @@ jupyter:
 ```{python}
 import pandas as pd
 import json
-from pandas.io.json import json_normalize
+from pandas import json_normalize
 
 def convert_ln_json_to_df(json_file_path):
     
@@ -27,7 +27,7 @@ def convert_ln_json_to_df(json_file_path):
     df_nodes = json_normalize(graph_json['nodes'])
     
     df_channels = json_normalize(graph_json['edges'])
-    df_channels.channel_id = df_channels.capacity.astype(int)
+    df_channels.channel_id = df_channels.channel_id.astype(int)
     df_channels.capacity = df_channels.capacity.astype(int)
     
     return df_nodes, df_channels
@@ -85,7 +85,7 @@ def convert_ln_json_to_nx_graph(json_file_path):
         
     return G
 
-lngraph_path = '/Users/steliosrammos/Documents/Datasets/LNGraph/lngraph_20193011.json'
+lngraph_path = 'lngraph.json'
 nxgraph = convert_ln_json_to_nx_graph(lngraph_path)
 ```
 
@@ -130,7 +130,7 @@ def convert_ln_json_to_gt_graph(json_file_path, internal_properties=True, direct
     e_node2_policy = g.new_edge_property("object")
 
     # Create dictionary of pub_key:index pairs to keep track of vertices to generate edges
-    v_indeces = {}
+    v_indices = {}
     
     # Let's now add the new vertices and edges
     for node in graph_json['nodes']:
@@ -140,11 +140,11 @@ def convert_ln_json_to_gt_graph(json_file_path, internal_properties=True, direct
         v_addresses[v] = node['addresses']
         v_color[v] = node['color']
         v_last_update[v] = node['last_update']
-        v_indeces[node['pub_key']] = g.vertex_index[v]
+        v_indices[node['pub_key']] = g.vertex_index[v]
 
     for edge in graph_json['edges']:
-        v_index = v_indeces[edge['node1_pub']]
-        target_index = v_indeces[edge['node2_pub']]
+        v_index = v_indices[edge['node1_pub']]
+        target_index = v_indices[edge['node2_pub']]
         
         v = g.vertex(v_index)
         target = g.vertex(target_index)
@@ -177,7 +177,7 @@ def convert_ln_json_to_gt_graph(json_file_path, internal_properties=True, direct
                              
     return g
 
-lngraph_path = '/Users/steliosrammos/Documents/Datasets/LNGraph/lngraph_20193011.json'
+lngraph_path = 'lngraph.json'
 gtgraph = convert_ln_json_to_gt_graph(lngraph_path)
 ```
 
@@ -380,7 +380,7 @@ get_basic_stats(transitivities, 'node transitivities')
 # Percent of cut vertices
 _, art, _ = gt.topology.label_biconnected_components(gtgraph)
 cnt_cut_vertices = art.a.sum()
-percent_cut_vertices = art.a.sum()/gtgraph.num_edges()
+percent_cut_vertices = art.a.sum()/gtgraph.num_vertices()
 print('Percent of cut vertices: {}'.format(round(float(percent_cut_vertices),3)))
 
 # Percent of cut edges

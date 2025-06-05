@@ -10,4 +10,4 @@ pip install pandas pytest
 pytest
 ```
 
-The same tests run automatically on each push or pull request using GitHub Actions.
+Place the Lightning Network graph dataset file `lngraph.json` in the project root directory.
