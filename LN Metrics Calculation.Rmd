@@ -335,7 +335,7 @@ def get_distance_measures(graph, directed=False, pseudo_diameter=False, return_d
     # Diameter of the graph: length of the longest shortest path in the graph
     if pseudo_diameter:
         diameter, _ = gt.topology.pseudo_diameter(graph)
-        print('Diameter: {}'.format(pseudo_diameter))
+        print('Diameter: {}'.format(diameter))
     else: 
         diameter = shortest_paths.values.max()
         print('Pseudo-diameter: {}'.format(diameter))
