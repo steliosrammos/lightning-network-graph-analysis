@@ -1,20 +1,13 @@
-import pytest
-nbformat = pytest.importorskip('nbformat')
-pd = pytest.importorskip('pandas')
+import sys
+from pathlib import Path
 
+import pandas as pd
 
-def load_add_node_chan_info():
-    nb = nbformat.read('LN Metrics Calculation.ipynb', as_version=4)
-    for cell in nb.cells:
-        if cell.cell_type == 'code' and 'def add_node_chan_info' in cell.source:
-            namespace = {'pd': pd}
-            exec(cell.source, namespace)
-            return namespace['add_node_chan_info']
-    raise AssertionError('Function add_node_chan_info not found')
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from analysis import add_node_chan_info
 
 
 def test_add_node_chan_info_counts_channels():
-    add_node_chan_info = load_add_node_chan_info()
 
     df_nodes = pd.DataFrame({'pub_key': ['A', 'B', 'C']})
     df_channels = pd.DataFrame({
