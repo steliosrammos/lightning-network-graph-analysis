@@ -17,7 +17,7 @@ jupyter:
 ```{python}
 import pandas as pd
 import json
-from pandas.io.json import json_normalize
+from pandas import json_normalize
 
 def convert_ln_json_to_df(json_file_path):
     
@@ -27,7 +27,7 @@ def convert_ln_json_to_df(json_file_path):
     df_nodes = json_normalize(graph_json['nodes'])
     
     df_channels = json_normalize(graph_json['edges'])
-    df_channels.channel_id = df_channels.capacity.astype(int)
+    df_channels.channel_id = df_channels.channel_id.astype(int)
     df_channels.capacity = df_channels.capacity.astype(int)
     
     return df_nodes, df_channels
@@ -380,7 +380,7 @@ get_basic_stats(transitivities, 'node transitivities')
 # Percent of cut vertices
 _, art, _ = gt.topology.label_biconnected_components(gtgraph)
 cnt_cut_vertices = art.a.sum()
-percent_cut_vertices = art.a.sum()/gtgraph.num_edges()
+percent_cut_vertices = art.a.sum()/gtgraph.num_vertices()
 print('Percent of cut vertices: {}'.format(round(float(percent_cut_vertices),3)))
 
 # Percent of cut edges
