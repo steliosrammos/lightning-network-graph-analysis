@@ -85,7 +85,7 @@ def convert_ln_json_to_nx_graph(json_file_path):
         
     return G
 
-lngraph_path = '/Users/steliosrammos/Documents/Datasets/LNGraph/lngraph_20193011.json'
+lngraph_path = 'lngraph.json'
 nxgraph = convert_ln_json_to_nx_graph(lngraph_path)
 ```
 
@@ -177,7 +177,7 @@ def convert_ln_json_to_gt_graph(json_file_path, internal_properties=True, direct
                              
     return g
 
-lngraph_path = '/Users/steliosrammos/Documents/Datasets/LNGraph/lngraph_20193011.json'
+lngraph_path = 'lngraph.json'
 gtgraph = convert_ln_json_to_gt_graph(lngraph_path)
 ```
 
