@@ -224,14 +224,18 @@ def add_node_chan_info(df_nodes, df_channels):
     for index, node in df_nodes.iterrows():
 
         pub_key = node['pub_key']
-        node_channels = df_channels[df_channels.node1_pub == pub_key]
+        node_channels = df_channels[(df_channels.node1_pub == pub_key) |
+                                    (df_channels.node2_pub == pub_key)]
 
         enabled_channels = 0
         total_capacity = 0
 
         for _, channel in node_channels.iterrows():
             total_capacity += channel.capacity
-            disabled = channel.loc['node1_policy.disabled']
+            if channel.node1_pub == pub_key:
+                disabled = channel.loc['node1_policy.disabled']
+            else:
+                disabled = channel.loc['node2_policy.disabled']
 
             if disabled is not None and not disabled:
                 enabled_channels += 1
